@@ -1,4 +1,4 @@
-Zom for Android (previously known as ChatSecure and Gibberbot) is a secure messaging app built on open standards like XMPP/Jabber and OTR encryption.
+...Zom for Android (previously known as ChatSecure and Gibberbot) is a secure messaging app built on open standards like XMPP/Jabber and OTR encryption.
 
 Learn more at https://zom.im
 
