@@ -65,6 +65,8 @@
      
     <color name="zom_primary">#E7275A</color>
 
+    <color name="colorWhite">#ffffff</color>
+
     <array name="zom_colors">
         <item>@color/zom_primary</item>
         <item>@color/holo_grey_light</item>

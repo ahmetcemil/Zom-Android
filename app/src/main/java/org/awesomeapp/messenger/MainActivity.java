@@ -35,12 +35,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
-import android.os.IInterface;
-import android.os.Parcel;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
-import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.design.widget.TabLayout;
@@ -49,8 +46,6 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v4.view.ViewPager;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -89,7 +84,6 @@ import org.awesomeapp.messenger.ui.ContactsPickerActivity;
 import org.awesomeapp.messenger.ui.ConversationDetailActivity;
 import org.awesomeapp.messenger.ui.ConversationListFragment;
 import org.awesomeapp.messenger.ui.LockScreenActivity;
-import org.awesomeapp.messenger.ui.MoreFragment;
 import org.awesomeapp.messenger.ui.legacy.SettingActivity;
 import org.awesomeapp.messenger.ui.onboarding.OnboardingActivity;
 import org.awesomeapp.messenger.ui.onboarding.OnboardingManager;
@@ -100,7 +94,6 @@ import org.awesomeapp.messenger.util.XmppUriHelper;
 import org.ironrabbit.type.CustomTypefaceManager;
 
 import java.io.File;
-import java.io.FileDescriptor;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -124,6 +117,7 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
     private Toolbar mToolbar;
 
     private ImApp mApp;
+    private IImConnection mConn;
 
     public final static int REQUEST_ADD_CONTACT = 9999;
     public final static int REQUEST_CHOOSE_CONTACT = REQUEST_ADD_CONTACT+1;
@@ -131,226 +125,168 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
 
     private ConversationListFragment mConversationList;
     private ContactsListFragment mContactList;
-    private MoreFragment mMoreFragment;
+//    private MoreFragment mMoreFragment;
     private AccountFragment mAccountFragment;
-
-    private IImConnection mConn;
 
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
 
+        presets();
+        setTabs();
+        setFloatingButton();
+        applyStyle();
+
+        //checkForAppUpdates();
+        //installRingtones();
+
+        onResume();
+    }
+    private void presets(){
         final SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
 
         if (settings.getBoolean("prefBlockScreenshots",true))
-            getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE,
-                    WindowManager.LayoutParams.FLAG_SECURE);
-
+            getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
 
         setContentView(R.layout.awesome_activity_main);
 
         mApp = (ImApp)getApplication();
 
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(mToolbar);
+
+    }
+    private void setTabs(){
         mViewPager = (ViewPager) findViewById(R.id.viewpager);
         mTabLayout = (TabLayout) findViewById(R.id.tabs);
 
-        setSupportActionBar(mToolbar);
-
-        final ActionBar ab = getSupportActionBar();
-
         mConversationList = new ConversationListFragment();
         mContactList = new ContactsListFragment();
-        mMoreFragment = new MoreFragment();
+      //  mMoreFragment = new MoreFragment();
         mAccountFragment = new AccountFragment();
 
         Adapter adapter = new Adapter(getSupportFragmentManager());
         adapter.addFragment(mConversationList, getString(R.string.title_chats), R.drawable.ic_message_white_36dp);
         adapter.addFragment(mContactList, getString(R.string.contacts), R.drawable.ic_people_white_36dp);
-        adapter.addFragment(mMoreFragment, getString(R.string.title_more), R.drawable.ic_more_horiz_white_36dp);
-
-        mAccountFragment = new AccountFragment();
-      //  fragAccount.setArguments();
-
+//        adapter.addFragment(mMoreFragment, getString(R.string.title_more), R.drawable.ic_more_horiz_white_36dp);
         adapter.addFragment(mAccountFragment, getString(R.string.title_me), R.drawable.ic_face_white_24dp);
 
         mViewPager.setAdapter(adapter);
 
         mViewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(mTabLayout));
 
-        TabLayout.Tab tab = mTabLayout.newTab();
-        tab.setIcon(R.drawable.ic_discuss);
-        mTabLayout.addTab(tab);
+        TabLayout.Tab tab = mTabLayout.newTab();    tab.setIcon(R.drawable.ic_discuss);             mTabLayout.addTab(tab);
+        tab = mTabLayout.newTab();                  tab.setIcon(R.drawable.ic_people_white_36dp);   mTabLayout.addTab(tab);
+//        tab = mTabLayout.newTab();                  tab.setIcon(R.drawable.ic_explore_white_24dp);  mTabLayout.addTab(tab);
+        tab = mTabLayout.newTab();                  tab.setIcon(R.drawable.ic_face_white_24dp);     mTabLayout.addTab(tab);
 
-        tab = mTabLayout.newTab();
-        tab.setIcon(R.drawable.ic_people_white_36dp);
-        mTabLayout.addTab(tab);
-
-        tab = mTabLayout.newTab();
-        tab.setIcon(R.drawable.ic_explore_white_24dp);
-        mTabLayout.addTab(tab);
-
-        tab = mTabLayout.newTab();
-        tab.setIcon(R.drawable.ic_face_white_24dp);
-        mTabLayout.addTab(tab);
-
-        mTabLayout.setOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+        mTabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
-
                 mViewPager.setCurrentItem(tab.getPosition());
                 setToolbarTitle(tab.getPosition());
-                applyStyleColors ();
+                applyStyleColors();
             }
-
             @Override
-            public void onTabUnselected(TabLayout.Tab tab) {
-
-            }
-
+            public void onTabUnselected(TabLayout.Tab tab) {}
             @Override
             public void onTabReselected(TabLayout.Tab tab) {
                 setToolbarTitle(tab.getPosition());
                 applyStyleColors ();
             }
         });
+        setToolbarTitle(0);
+    }
+    private void setToolbarTitle (int tabPosition) {
+        StringBuffer sb = new StringBuffer();
+        sb.append(getString(R.string.emusiad));
+        sb.append(" | ");
 
+        switch (tabPosition) {
+            case 0:
+                if (mConversationList.getArchiveFilter())
+                    sb.append(getString(R.string.action_archive));
+                else
+                    sb.append(getString(R.string.chats));
+                break;
+            case 1:
+                if (mContactList.getCurrentType()==Imps.Contacts.TYPE_HIDDEN)
+                    sb.append(getString(R.string.action_archive));
+                else
+                    sb.append(getString(R.string.friends));
+                break;
+            case 2:
+//                sb.append(getString(R.string.title_more));break;
+                //           case 3:
+                sb.append(getString(R.string.me_title));
+                break;
+        }
+        mToolbar.setTitle(sb.toString());
+
+        if (mFab != null) {
+            mFab.setVisibility(View.VISIBLE);
+            switch (tabPosition) {
+                case 1:
+                    mFab.setImageResource(R.drawable.ic_person_add_white_36dp);
+                    break;
+                case 2:
+                    //                    mFab.setImageResource(R.drawable.ic_photo_camera_white_36dp);
+                    mFab.setVisibility(View.GONE);
+                    break;
+                case 3:
+                    mFab.setVisibility(View.GONE);
+                    break;
+                default:
+                    mFab.setImageResource(R.drawable.ic_add_white_24dp);
+                    break;
+            }
+        }
+    }
+    private void setFloatingButton(){
         mFab = (FloatingActionButton) findViewById(R.id.fab);
         mFab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
                 int tabIdx = mViewPager.getCurrentItem();
-
                 if (tabIdx == 0) {
-
                     if (mContactList.getContactCount() > 0) {
                         Intent intent = new Intent(MainActivity.this, ContactsPickerActivity.class);
                         startActivityForResult(intent, REQUEST_CHOOSE_CONTACT);
-                    }
-                    else
-                    {
+                    } else {
                         inviteContact();
                     }
-
                 } else if (tabIdx == 1) {
                     inviteContact();
                 } else if (tabIdx == 2) {
                     startPhotoTaker();
                 }
-
-
-
             }
         });
 
-        setToolbarTitle(0);
-
-        //don't wnat this to happen to often
-        checkForUpdates();
-
-        installRingtones ();
-
-        applyStyle();
-
-        onResume();
     }
-
-    private void installRingtones ()
-    {
-        AssetUtil.installRingtone(getApplicationContext(),R.raw.bell,"Zom Bell");
-        AssetUtil.installRingtone(getApplicationContext(),R.raw.chant,"Zom Chant");
-        AssetUtil.installRingtone(getApplicationContext(),R.raw.yak,"Zom Yak");
-        AssetUtil.installRingtone(getApplicationContext(),R.raw.dranyen,"Zom Dranyen");
-
-    }
-
-    private void setToolbarTitle (int tabPosition)
-    {
-        StringBuffer sb = new StringBuffer();
-        sb.append(getString(R.string.app_name_zom));
-        sb.append(" | ");
-
-        switch (tabPosition) {
-            case 0:
-
-                if (mConversationList.getArchiveFilter())
-                    sb.append(getString(R.string.action_archive));
-                else
-                    sb.append(getString(R.string.chats));
-
-                break;
-            case 1:
-
-                if (mContactList.getCurrentType()==Imps.Contacts.TYPE_HIDDEN)
-                    sb.append(getString(R.string.action_archive));
-                else
-                    sb.append(getString(R.string.friends));
-
-                break;
-            case 2:
-                sb.append(getString(R.string.title_more));
-                break;
-            case 3:
-                sb.append(getString(R.string.me_title));
-                break;
-        }
-
-        mToolbar.setTitle(sb.toString());
-
-        if (mFab != null) {
-            mFab.setVisibility(View.VISIBLE);
-
-            if (tabPosition == 1) {
-                mFab.setImageResource(R.drawable.ic_person_add_white_36dp);
-            } else if (tabPosition == 2) {
-                //                    mFab.setImageResource(R.drawable.ic_photo_camera_white_36dp);
-                mFab.setVisibility(View.GONE);
-
-            } else if (tabPosition == 3) {
-                mFab.setVisibility(View.GONE);
-            } else {
-                mFab.setImageResource(R.drawable.ic_add_white_24dp);
-            }
-        }
-
-    }
-
-    public void inviteContact ()
-    {
-        Intent i = new Intent(MainActivity.this, AddContactActivity.class);
-        startActivityForResult(i, MainActivity.REQUEST_ADD_CONTACT);
-    }
-
 
     @Override
     public void onResume() {
         super.onResume();
 
-        applyStyleColors ();
+        applyStyleColors();
 
         //if VFS is not mounted, then send to WelcomeActivity
         if (!VirtualFileSystem.get().isMounted()) {
             finish();
             startActivity(new Intent(this, RouterActivity.class));
-
         } else {
             ImApp app = (ImApp) getApplication();
             mApp.maybeInit(this);
             mApp.initAccountInfo();
         }
 
+        handleIntent(); //check if opening with an intent
 
-        handleIntent();
-
-
-        if (mApp.getDefaultAccountId() == -1)
-        {
+        if (mApp.getDefaultAccountId() == -1) {
             startActivity(new Intent(this,OnboardingActivity.class));
-        }
-        else {
+        } else {
             if (mConn == null) {
                 mConn = mApp.getConnection(mApp.getDefaultProviderId(), mApp.getDefaultAccountId());
                 if (mConn != null) {
@@ -359,74 +295,69 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
                     } catch (Exception e) {
                         Log.e(ImApp.LOG_TAG, "unable to register connection listener", e);
                     }
-
                 }
             }
-
             checkConnection();
-
         }
-
     }
 
-    private Snackbar mSbStatus;
+
+    public void inviteContact ()
+    {
+        Intent i = new Intent(MainActivity.this, AddContactActivity.class);
+        startActivityForResult(i, MainActivity.REQUEST_ADD_CONTACT);
+    }
+
+
+
+    private Snackbar snackbar;
 
     private boolean checkConnection() {
         try {
+            if (snackbar != null) snackbar.dismiss();
 
-            if (mSbStatus != null)
-                mSbStatus.dismiss();
-
-            if (!isNetworkAvailable())
-            {
-                mSbStatus = Snackbar.make(mViewPager, "No Internet", Snackbar.LENGTH_INDEFINITE);
-                mSbStatus.show();
+            if (!isNetworkAvailable()) {
+                snackbar = Snackbar.make(mViewPager, R.string.no_internet, Snackbar.LENGTH_INDEFINITE);
+                snackbar.show();
                 return false;
             }
 
             if (mApp.getDefaultProviderId() != -1) {
                 IImConnection conn = mApp.getConnection(mApp.getDefaultProviderId(), mApp.getDefaultAccountId());
 
-
-
-                if (conn.getState() == ImConnection.DISCONNECTED
-                        || conn.getState() == ImConnection.SUSPENDED
-                        || conn.getState() == ImConnection.SUSPENDING) {
-
-                    mSbStatus = Snackbar.make(mViewPager, R.string.error_suspended_connection, Snackbar.LENGTH_INDEFINITE);
-                    mSbStatus.setAction(getString(R.string.connect), new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {
-                            mSbStatus.dismiss();
-                            Intent i = new Intent(MainActivity.this, AccountsActivity.class);
-                            startActivity(i);
-                        }
-                    });
-                    mSbStatus.show();
-
-                    return false;
-                }
-                else if (conn.getState() == ImConnection.LOGGED_IN)
-                {
-                    //do nothing
-                }
-                else if (conn.getState() == ImConnection.LOGGING_IN)
-                {
-                    mSbStatus = Snackbar.make(mViewPager, R.string.signing_in_wait, Snackbar.LENGTH_INDEFINITE);
-                    mSbStatus.show();
-                }
-                else if (conn.getState() == ImConnection.LOGGING_OUT)
-                {
-                    mSbStatus = Snackbar.make(mViewPager, R.string.signing_out_wait, Snackbar.LENGTH_INDEFINITE);
-                    mSbStatus.show();
+                int state = conn.getState();
+                switch (state) {
+                    case ImConnection.DISCONNECTED:
+                    case ImConnection.SUSPENDED:
+                    case ImConnection.SUSPENDING:
+                        snackbar = Snackbar.make(mViewPager, R.string.error_suspended_connection, Snackbar.LENGTH_INDEFINITE);
+                        snackbar.setAction(getString(R.string.connect), new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                snackbar.dismiss();
+                                Intent i = new Intent(MainActivity.this, AccountsActivity.class);
+                                startActivity(i);
+                            }
+                        });
+                        snackbar.show();
+                        return false;
+                    case ImConnection.LOGGED_IN:
+                        snackbar.dismiss();
+                        break;
+                    case ImConnection.LOGGING_IN:
+                        snackbar = Snackbar.make(mViewPager, R.string.signing_in_wait, Snackbar.LENGTH_INDEFINITE);
+                        snackbar.show();
+                        break;
+                    case ImConnection.LOGGING_OUT:
+                        snackbar = Snackbar.make(mViewPager, R.string.signing_out_wait, Snackbar.LENGTH_INDEFINITE);
+                        snackbar.show();
+                        break;
                 }
             }
-
             return true;
         } catch (Exception e) {
             return false;
         }
-
     }
 
     private boolean isNetworkAvailable() {
@@ -439,37 +370,26 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-
         setIntent(intent);
-
         handleIntent();
     }
-
-    private void handleIntent ()
-    {
-
+    private void handleIntent () {
         Intent intent = getIntent();
 
-        if (intent != null)
-        {
+        if (intent != null) {
             Uri data = intent.getData();
             String type = intent.getType();
-          if (data != null && Imps.Chats.CONTENT_ITEM_TYPE.equals(type)) {
-
+            if (data != null && Imps.Chats.CONTENT_ITEM_TYPE.equals(type)) {
                 long chatId = ContentUris.parseId(data);
                 Intent intentChat = new Intent(this, ConversationDetailActivity.class);
                 intentChat.putExtra("id", chatId);
                 startActivity(intentChat);
-            }
-            else if (Imps.Contacts.CONTENT_ITEM_TYPE.equals(type))
-            {
-                long providerId = intent.getLongExtra(ImServiceConstants.EXTRA_INTENT_PROVIDER_ID,mApp.getDefaultProviderId());
-                long accountId = intent.getLongExtra(ImServiceConstants.EXTRA_INTENT_ACCOUNT_ID,mApp.getDefaultAccountId());
+            } else if (Imps.Contacts.CONTENT_ITEM_TYPE.equals(type)) {
+                long providerId = intent.getLongExtra(ImServiceConstants.EXTRA_INTENT_PROVIDER_ID, mApp.getDefaultProviderId());
+                long accountId = intent.getLongExtra(ImServiceConstants.EXTRA_INTENT_ACCOUNT_ID, mApp.getDefaultAccountId());
                 String username = intent.getStringExtra(ImServiceConstants.EXTRA_INTENT_FROM_ADDRESS);
                 startChat(providerId, accountId, username, true, true);
-            }
-            else if (intent.hasExtra("username"))
-            {
+            } else if (intent.hasExtra("username")) {
                 //launch a new chat based on the intent value
                 startChat(mApp.getDefaultProviderId(), mApp.getDefaultAccountId(), intent.getStringExtra("username"), true, true);
             }
@@ -483,125 +403,88 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (resultCode == RESULT_OK) {
-
-            if (requestCode == REQUEST_CHANGE_SETTINGS)
-            {
-                finish();
-                startActivity(new Intent(this, MainActivity.class));
-            }
-            else if (requestCode == REQUEST_ADD_CONTACT)
-            {
-
-                String username = data.getStringExtra(ContactsPickerActivity.EXTRA_RESULT_USERNAME);
-
-                if (username != null) {
-                    long providerId = data.getLongExtra(ContactsPickerActivity.EXTRA_RESULT_PROVIDER, -1);
-                    long accountId = data.getLongExtra(ContactsPickerActivity.EXTRA_RESULT_ACCOUNT,-1);
-
-                    startChat(providerId, accountId, username, true, true);
-                }
-
-            }
-            else if (requestCode == REQUEST_CHOOSE_CONTACT)
-            {
-                String username = data.getStringExtra(ContactsPickerActivity.EXTRA_RESULT_USERNAME);
-
-                if (username != null) {
-                    long providerId = data.getLongExtra(ContactsPickerActivity.EXTRA_RESULT_PROVIDER, -1);
-                    long accountId = data.getLongExtra(ContactsPickerActivity.EXTRA_RESULT_ACCOUNT, -1);
-
-                    startChat(providerId, accountId, username, true, true);
-                }
-                else {
-
-                    ArrayList<String> users = data.getStringArrayListExtra(ContactsPickerActivity.EXTRA_RESULT_USERNAMES);
-                    if (users != null)
-                    {
-                        //start group and do invite here
-                        startGroupChat(users);
+            switch (requestCode) {
+                case REQUEST_CHANGE_SETTINGS:
+                    finish();
+                    startActivity(new Intent(this, MainActivity.class));
+                    break;
+                case REQUEST_ADD_CONTACT: {
+                    String username = data.getStringExtra(ContactsPickerActivity.EXTRA_RESULT_USERNAME);
+                    if (username != null) {
+                        long providerId = data.getLongExtra(ContactsPickerActivity.EXTRA_RESULT_PROVIDER, -1);
+                        long accountId = data.getLongExtra(ContactsPickerActivity.EXTRA_RESULT_ACCOUNT, -1);
+                        startChat(providerId, accountId, username, true, true);
                     }
-
+                    break;
                 }
-            }
-            else if (requestCode == ConversationDetailActivity.REQUEST_TAKE_PICTURE)
-            {
-                try {
-                    if (mLastPhoto != null)
-                        importPhoto();
+                case REQUEST_CHOOSE_CONTACT: {
+                    String username = data.getStringExtra(ContactsPickerActivity.EXTRA_RESULT_USERNAME);
+                    if (username != null) {
+                        long providerId = data.getLongExtra(ContactsPickerActivity.EXTRA_RESULT_PROVIDER, -1);
+                        long accountId = data.getLongExtra(ContactsPickerActivity.EXTRA_RESULT_ACCOUNT, -1);
+
+                        startChat(providerId, accountId, username, true, true);
+                    } else {
+                        ArrayList<String> users = data.getStringArrayListExtra(ContactsPickerActivity.EXTRA_RESULT_USERNAMES);
+                        if (users != null) {
+                            //start group and do invite here
+                            startGroupChat(users);
+                        }
+                    }
+                    break;
                 }
-                catch (Exception e)
-                {
-                    Log.w(ImApp.LOG_TAG, "error importing photo",e);
-
-                }
-            }
-            else if (requestCode == OnboardingManager.REQUEST_SCAN) {
-
-                ArrayList<String> resultScans = data.getStringArrayListExtra("result");
-                for (String resultScan : resultScans)
-                {
-
+                case ConversationDetailActivity.REQUEST_TAKE_PICTURE:
                     try {
-
-                        String address = null;
-
-                        if (resultScan.startsWith("xmpp:"))
-                        {
-                            address = XmppUriHelper.parse(Uri.parse(resultScan)).get(XmppUriHelper.KEY_ADDRESS);
-                            String fingerprint =  XmppUriHelper.getOtrFingerprint(resultScan);
-                            new AddContactAsyncTask(mApp.getDefaultProviderId(), mApp.getDefaultAccountId(), mApp).execute(address, fingerprint);
-
-                        }
-                        else {
-                            //parse each string and if they are for a new user then add the user
-                            OnboardingManager.DecodedInviteLink diLink = OnboardingManager.decodeInviteLink(resultScan);
-
-                            new AddContactAsyncTask(mApp.getDefaultProviderId(), mApp.getDefaultAccountId(), mApp).execute(diLink.username,diLink.fingerprint,diLink.nickname);
-                        }
-
-                        if (address != null)
-                            startChat(mApp.getDefaultProviderId(), mApp.getDefaultAccountId(), address, true, true);
-
-                        //if they are for a group chat, then add the group
+                        if (mLastPhoto != null)
+                            importPhoto();
+                    } catch (Exception e) {
+                        Log.w(ImApp.LOG_TAG, "error importing photo", e);
                     }
-                    catch (Exception e)
-                    {
-                        Log.w(ImApp.LOG_TAG, "error parsing QR invite link", e);
+                    break;
+                case OnboardingManager.REQUEST_SCAN:
+                    ArrayList<String> resultScans = data.getStringArrayListExtra("result");
+                    for (String resultScan : resultScans) {
+                        try {
+                            String address = null;
+                            if (resultScan.startsWith("xmpp:")) {
+                                address = XmppUriHelper.parse(Uri.parse(resultScan)).get(XmppUriHelper.KEY_ADDRESS);
+                                String fingerprint = XmppUriHelper.getOtrFingerprint(resultScan);
+                                new AddContactAsyncTask(mApp.getDefaultProviderId(), mApp.getDefaultAccountId(), mApp).execute(address, fingerprint);
+                            } else {
+                                //parse each string and if they are for a new user then add the user
+                                OnboardingManager.DecodedInviteLink diLink = OnboardingManager.decodeInviteLink(resultScan);
+                                new AddContactAsyncTask(mApp.getDefaultProviderId(), mApp.getDefaultAccountId(), mApp).execute(diLink.username, diLink.fingerprint, diLink.nickname);
+                            }
+                            if (address != null)
+                                startChat(mApp.getDefaultProviderId(), mApp.getDefaultAccountId(), address, true, true);
+                            //if they are for a group chat, then add the group
+                        } catch (Exception e) {
+                            Log.w(ImApp.LOG_TAG, "error parsing QR invite link", e);
+                        }
                     }
-                }
+                    break;
             }
         }
     }
 
-    private void startGroupChat (ArrayList<String> invitees)
-    {
-
-
+    private void startGroupChat (ArrayList<String> invitees) {
         String chatRoom = "groupchat" + UUID.randomUUID().toString().substring(0,8);
         String chatServer = ""; //use the default
         String nickname = mApp.getDefaultUsername().split("@")[0];
-        try
-        {
+        try {
             IImConnection conn = mApp.getConnection(mApp.getDefaultProviderId(),mApp.getDefaultAccountId());
-            if (conn.getState() == ImConnection.LOGGED_IN)
-            {
+            if (conn.getState() == ImConnection.LOGGED_IN) {
                 this.startGroupChat(chatRoom, chatServer, nickname, invitees, conn);
-
             }
-        } catch (RemoteException re) {
-
-        }
+        } catch (RemoteException re) {}
     }
 
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
         super.onSaveInstanceState(savedInstanceState);
-
         if (mLastPhoto != null)
             savedInstanceState.putString("lastphoto", mLastPhoto.toString());
-
     }
-
     @Override
     public void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
@@ -612,17 +495,13 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
         if (lastPhotoPath != null)
             mLastPhoto = Uri.parse(lastPhotoPath);
     }
-
     private void importPhoto () throws FileNotFoundException, UnsupportedEncodingException {
-
         // import
         SystemServices.FileInfo info = SystemServices.getFileInfoFromURI(this, mLastPhoto);
         String sessionId = "self";
         String offerId = UUID.randomUUID().toString();
-
         try {
             Uri vfsUri = SecureMediaStore.resizeAndImportImage(this, sessionId, mLastPhoto, info.type);
-
             delete(mLastPhoto);
 
             //adds in an empty message, so it can exist in the gallery and be forwarded
@@ -630,14 +509,11 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
                     getContentResolver(), false, new Date().getTime(), true, null, vfsUri.toString(),
                     System.currentTimeMillis(), Imps.MessageType.OUTGOING_ENCRYPTED_VERIFIED,
                     0, offerId, info.type);
-
             mLastPhoto = null;
         }
-        catch (IOException ioe)
-        {
+        catch (IOException ioe) {
             Log.e(ImApp.LOG_TAG,"error importing photo",ioe);
         }
-
     }
 
     private boolean delete(Uri uri) {
@@ -662,36 +538,28 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
         SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
         mSearchView = (SearchView) MenuItemCompat.getActionView(menu.findItem(R.id.menu_search));
 
-        if (mSearchView != null )
-        {
+        if (mSearchView != null ) {
             mSearchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
             mSearchView.setIconifiedByDefault(false);
 
-            SearchView.OnQueryTextListener queryTextListener = new SearchView.OnQueryTextListener()
-            {
-                public boolean onQueryTextChange(String query)
-                {
+            SearchView.OnQueryTextListener queryTextListener = new SearchView.OnQueryTextListener() {
+                public boolean onQueryTextChange(String query) {
                     if (mTabLayout.getSelectedTabPosition() == 0)
                         mConversationList.doSearch(query);
                     else if (mTabLayout.getSelectedTabPosition() == 1)
                         mContactList.doSearch(query);
-
                     return true;
                 }
-
-                public boolean onQueryTextSubmit(String query)
-                {
+                public boolean onQueryTextSubmit(String query) {
                     if (mTabLayout.getSelectedTabPosition() == 0)
                         mConversationList.doSearch(query);
                     else if (mTabLayout.getSelectedTabPosition() == 1)
                         mContactList.doSearch(query);
-
                     return true;
                 }
             };
 
             mSearchView.setOnQueryTextListener(queryTextListener);
-
             mSearchView.setOnCloseListener(new SearchView.OnCloseListener() {
                 @Override
                 public boolean onClose() {
@@ -702,11 +570,9 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
         }
 
         MenuItem mItem = menu.findItem(R.id.menu_lock_reset);
-
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
         if (!settings.contains(ImApp.PREFERENCE_KEY_TEMP_PASS))
             mItem.setVisible(true);
-
         return true;
     }
 
@@ -746,33 +612,22 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
         return super.onOptionsItemSelected(item);
     }
 
-    private void clearFilters ()
-    {
-
+    private void clearFilters () {
         if (mTabLayout.getSelectedTabPosition() == 0)
             mConversationList.setArchiveFilter(false);
         else
             mContactList.setArchiveFilter(false);
-
         setToolbarTitle(mTabLayout.getSelectedTabPosition());
-
     }
-
-    private void enableArchiveFilter ()
-    {
-
+    private void enableArchiveFilter () {
         if (mTabLayout.getSelectedTabPosition() == 0)
             mConversationList.setArchiveFilter(true);
         else
             mContactList.setArchiveFilter(true);
-
-
         setToolbarTitle(mTabLayout.getSelectedTabPosition());
-
     }
 
-    public void resetPassphrase ()
-    {
+    public void resetPassphrase () {
         /**
         Intent intent = new Intent(this, LockScreenActivity.class);
         intent.setAction(LockScreenActivity.ACTION_RESET_PASSPHRASE);
@@ -783,21 +638,15 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
         intent.setAction(LockScreenActivity.ACTION_CHANGE_PASSPHRASE);
         startActivity(intent);
     }
-
-
-    public void handleLock ()
-    {
+    public void handleLock() {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
-        if (settings.contains(ImApp.PREFERENCE_KEY_TEMP_PASS))
-        {
+        if (settings.contains(ImApp.PREFERENCE_KEY_TEMP_PASS)) {
             //need to setup new user passphrase
             Intent intent = new Intent(this, LockScreenActivity.class);
             intent.setAction(LockScreenActivity.ACTION_CHANGE_PASSPHRASE);
             startActivity(intent);
         }
         else {
-
-            //time to do the lock
             Intent intent = new Intent(this, RouterActivity.class);
             intent.setAction(RouterActivity.ACTION_LOCK_APP);
             startActivity(intent);
@@ -809,17 +658,12 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
     public void onStateChanged(IImConnection connection, int state, ImErrorInfo error) throws RemoteException {
         checkConnection();
     }
-
     @Override
     public void onUserPresenceUpdated(IImConnection connection) throws RemoteException {
-
     }
-
     @Override
     public void onUpdatePresenceError(IImConnection connection, ImErrorInfo error) throws RemoteException {
-
     }
-
     @Override
     public IBinder asBinder() {
         return mConn.asBinder();
@@ -861,32 +705,23 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
 
 
 
-    public void startChat (long providerId, long accountId, String username, boolean startCrypto, final boolean openChat)
-    {
-
+    public void startChat (long providerId, long accountId, String username, boolean startCrypto, final boolean openChat) {
         //startCrypto is not actually used anymore, as we move to OMEMO
-
         if (username != null)
-            new ChatSessionInitTask(((ImApp)getApplication()),providerId, accountId, Imps.Contacts.TYPE_NORMAL)
-            {
+            new ChatSessionInitTask(((ImApp)getApplication()),providerId, accountId, Imps.Contacts.TYPE_NORMAL) {
                 @Override
                 protected void onPostExecute(Long chatId) {
-
                     if (chatId != -1 && openChat) {
                         Intent intent = new Intent(MainActivity.this, ConversationDetailActivity.class);
                         intent.putExtra("id", chatId);
                         startActivity(intent);
                     }
-
                     super.onPostExecute(chatId);
                 }
-
             }.executeOnExecutor(ImApp.sThreadPoolExecutor,new Contact(new XmppAddress(username)));
     }
 
-    public void showGroupChatDialog ()
-    {
-
+    public void showGroupChatDialog () {
         // This example shows how to add a custom layout to an AlertDialog
         LayoutInflater factory = LayoutInflater.from(this);
 
@@ -978,8 +813,7 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
     private IImConnection mLastConnGroup = null;
     private long mRequestedChatId = -1;
 
-    public void startGroupChat (String room, String server, String nickname, final ArrayList<String> invitees, IImConnection conn)
-    {
+    public void startGroupChat (String room, String server, String nickname, final ArrayList<String> invitees, IImConnection conn) {
         mLastConnGroup = conn;
 
         new AsyncTask<String, Long, String>() {
@@ -1004,6 +838,8 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
                 String server = params[1];
 
 
+                if(server.length()<1)
+                    server = "conference.kocyigit.com";
                 try {
 
                     IChatSessionManager manager = mLastConnGroup.getChatSessionManager();
@@ -1072,12 +908,9 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
 
             }
         }.executeOnExecutor(ImApp.sThreadPoolExecutor,room, server, nickname);
-
-
     }
 
-    private void showChat (long chatId)
-    {
+    private void showChat (long chatId) {
         Intent intent = new Intent(this, ConversationDetailActivity.class);
         intent.putExtra("id",chatId);
         startActivity(intent);
@@ -1086,13 +919,10 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
     @Override
     protected void onPause() {
         super.onPause();
-
     }
-
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
         if (mConn != null) {
             try {
                 mConn.unregisterConnectionListener(this);
@@ -1102,35 +932,30 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
         }
     }
 
-    private void checkForUpdates() {
+    private void checkForAppUpdates() {
         // Remove this for store builds!
      //   UpdateManager.register(this, ImApp.HOCKEY_APP_ID);
 
         //only check github for updates if there is no Google Play
         if (!hasGooglePlay()) {
             try {
-
                 String version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
 
                 //if this is a full release, without -beta -rc etc, then check the appupdater!
-                if (version.indexOf("-") == -1) {
-
+                if (!version.contains("-")) {
                     SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
                     long timeNow = new Date().getTime();
                     long timeSinceLastCheck = prefs.getLong("updatetime", -1);
 
                     //only check for updates once per day
                     if (timeSinceLastCheck == -1 || (timeNow - timeSinceLastCheck) > 86400) {
-
                         AppUpdater appUpdater = new AppUpdater(this);
                         appUpdater.setDisplay(Display.DIALOG);
                         appUpdater.setUpdateFrom(UpdateFrom.XML);
                         appUpdater.setUpdateXML(ImApp.URL_UPDATER);
-
                         //  appUpdater.showAppUpdated(true);
                         appUpdater.start();
-
-                        prefs.edit().putLong("updatetime", timeNow).commit();
+                        prefs.edit().putLong("updatetime", timeNow).apply();
                     }
                 }
             } catch (Exception e) {
@@ -1138,7 +963,6 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
             }
         }
     }
-
     boolean hasGooglePlay() {
         try {
             getApplication().getPackageManager().getPackageInfo("com.android.vending", 0);
@@ -1146,22 +970,15 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
             return false;
         }
         return true;
-
-
     }
 
-
     Uri mLastPhoto = null;
-
     void startPhotoTaker() {
-
         // create Intent to take a picture and return control to the calling application
         Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         File photo = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),  "cs_" + new Date().getTime() + ".jpg");
         mLastPhoto = Uri.fromFile(photo);
-        intent.putExtra(MediaStore.EXTRA_OUTPUT,
-                mLastPhoto);
-
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, mLastPhoto);
         // start the image capture Intent
         startActivityForResult(intent, ConversationDetailActivity.REQUEST_TAKE_PICTURE);
     }
@@ -1173,7 +990,6 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
         setContentView(R.layout.awesome_activity_main);
 
     }*/
-
     public void applyStyle() {
 
         //first set font
@@ -1194,19 +1010,14 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
 
         applyStyleColors ();
     }
-
-    private void applyStyleColors ()
-    {
+    private void applyStyleColors () {
         final SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
-
         //not set color
-
         int themeColorHeader = settings.getInt("themeColor",-1);
         int themeColorText = settings.getInt("themeColorText",-1);
         int themeColorBg = settings.getInt("themeColorBg",-1);
 
         if (themeColorHeader != -1) {
-
             if (themeColorText == -1)
                 themeColorText = getContrastColor(themeColorHeader);
 
@@ -1215,73 +1026,57 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
                 getWindow().setStatusBarColor(themeColorHeader);
                 getWindow().setTitleColor(getContrastColor(themeColorHeader));
             }
-
             mToolbar.setBackgroundColor(themeColorHeader);
             mToolbar.setTitleTextColor(getContrastColor(themeColorHeader));
-
             mTabLayout.setBackgroundColor(themeColorHeader);
             mTabLayout.setTabTextColors(themeColorText, themeColorText);
-
             mFab.setBackgroundColor(themeColorHeader);
-
         }
-
-        if (themeColorBg != -1)
-        {
+        if (themeColorBg != -1) {
             if (mConversationList != null && mConversationList.getView() != null)
                 mConversationList.getView().setBackgroundColor(themeColorBg);
 
             if (mContactList != null &&  mContactList.getView() != null)
                 mContactList.getView().setBackgroundColor(themeColorBg);
 
-            if (mMoreFragment != null && mMoreFragment.getView() != null)
-                mMoreFragment.getView().setBackgroundColor(themeColorBg);
+      //      if (mMoreFragment != null && mMoreFragment.getView() != null)
+      //          mMoreFragment.getView().setBackgroundColor(themeColorBg);
 
             if (mAccountFragment != null && mAccountFragment.getView() != null)
                 mAccountFragment.getView().setBackgroundColor(themeColorBg);
-
-
         }
-
     }
-
     public static int getContrastColor(int colorIn) {
-        double y = (299 * Color.red(colorIn) + 587 * Color.green(colorIn) + 114 * Color.blue(colorIn)) / 1000;
-        return y >= 128 ? Color.BLACK : Color.WHITE;
+        double y = (0.299 * Color.red(colorIn) + 0.587 * Color.green(colorIn) + 0.114 * Color.blue(colorIn));
+        return y >= 186 ? Color.BLACK : Color.WHITE;
     }
-
-    private void checkCustomFont ()
-    {
-
-        if (Preferences.isLanguageTibetan())
-        {
+    private void checkCustomFont () {
+        if (Preferences.isLanguageTibetan()) {
             CustomTypefaceManager.loadFromAssets(this,true);
-
-        }
-        else
-        {
+        } else {
             InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
             List<InputMethodInfo> mInputMethodProperties = imm.getEnabledInputMethodList();
 
             final int N = mInputMethodProperties.size();
             boolean loadTibetan = false;
             for (int i = 0; i < N; i++) {
-
                 InputMethodInfo imi = mInputMethodProperties.get(i);
-
                 //imi contains the information about the keyboard you are using
                 if (imi.getPackageName().equals("org.ironrabbit.bhoboard")) {
                     //                    CustomTypefaceManager.loadFromKeyboard(this);
                     loadTibetan = true;
-
                     break;
                 }
-
             }
-
             CustomTypefaceManager.loadFromAssets(this, loadTibetan);
         }
+    }
 
+    private void installRingtones() {
+        AssetUtil.installRingtone(getApplicationContext(),R.raw.bell,"Zom Bell");
+        AssetUtil.installRingtone(getApplicationContext(),R.raw.chant,"Zom Chant");
+        AssetUtil.installRingtone(getApplicationContext(),R.raw.yak,"Zom Yak");
+        AssetUtil.installRingtone(getApplicationContext(),R.raw.dranyen,"Zom Dranyen");
     }
 
 }

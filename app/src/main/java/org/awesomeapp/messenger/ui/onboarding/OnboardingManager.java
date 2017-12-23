@@ -304,9 +304,12 @@ public class OnboardingManager {
         Imps.ProviderSettings.QueryMap settings = new Imps.ProviderSettings.QueryMap(
                 pCursor, cr, providerId, false /* don't keep updated */, null /* no handler */);
 
-        settings.setRequireTls(true);
-        settings.setTlsCertVerify(true);
+        settings.setRequireTls(false);//TODO: ACD
+        settings.setTlsCertVerify(false);
         settings.setAllowPlainAuth(false);
+
+        settings.setUseProxy(false,null,0);
+
 
         try
         {
@@ -366,8 +369,7 @@ public class OnboardingManager {
 
     }
 
-    public static Pair<String,String> getServerInfo (Context context, int idx) throws JSONException
-    {
+    public static Pair<String,String> getServerInfo (Context context, int idx) throws JSONException {
         //load servers and try them all
         JSONObject obj = new JSONObject(loadServersJSON(context));
         JSONArray servers = obj.getJSONArray("servers");
@@ -390,6 +392,8 @@ public class OnboardingManager {
 
         ContentResolver cr = context.getContentResolver();
         ImPluginHelper helper = ImPluginHelper.getInstance(context);
+        helper.getProviderNames();
+
         long providerId = helper.createAdditionalProvider(helper.getProviderNames().get(0)); //xmpp FIXME
 
         long accountId = ImApp.insertOrUpdateAccount(cr, providerId, -1, nickname, username, password);
@@ -445,26 +449,17 @@ public class OnboardingManager {
     public static String loadServersJSON(Context context) {
         String json = null;
         try {
-
             InputStream is = context.getAssets().open("servers.json");
-
             int size = is.available();
-
             byte[] buffer = new byte[size];
-
             is.read(buffer);
-
             is.close();
-
             json = new String(buffer, "UTF-8");
-
-
         } catch (IOException ex) {
             ex.printStackTrace();
             return null;
         }
         return json;
-
     }
 
     public static class DecodedInviteLink {

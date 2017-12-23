@@ -173,7 +173,7 @@ public class ImApp extends MultiDexApplication implements ICacheWordSubscriber {
     public static final int EVENT_USER_PRESENCE_UPDATED = 300;
     public static final int EVENT_UPDATE_USER_PRESENCE_ERROR = 301;
 
-    private static final String[] PROVIDER_PROJECTION = { Imps.Provider._ID, Imps.Provider.NAME,
+    public static final String[] PROVIDER_PROJECTION = { Imps.Provider._ID, Imps.Provider.NAME,
                                                          Imps.Provider.FULLNAME,
                                                          Imps.Provider.SIGNUP_URL, };
 
@@ -334,17 +334,12 @@ public class ImApp extends MultiDexApplication implements ICacheWordSubscriber {
             log("start ImService");
 
         if (mImService == null) {
-
             Intent serviceIntent = new Intent(this, RemoteImService.class);
 //        serviceIntent.putExtra(ImServiceConstants.EXTRA_CHECK_AUTO_LOGIN, isBoot);
 
             mApplicationContext.startService(serviceIntent);
-
             mConnectionListener = new MyConnListener(new Handler());
-
-            mApplicationContext
-                    .bindService(serviceIntent, mImServiceConn, Context.BIND_AUTO_CREATE);
-
+            mApplicationContext.bindService(serviceIntent, mImServiceConn, Context.BIND_AUTO_CREATE);
         }
 
     }
@@ -439,6 +434,7 @@ public class ImApp extends MultiDexApplication implements ICacheWordSubscriber {
         return mImService != null;
     }
 
+    //TODO: ACD
     public static long insertOrUpdateAccount(ContentResolver cr, long providerId, long accountId, String nickname, String username,
             String pw) {
         String selection = Imps.Account.PROVIDER + "=? AND (" + Imps.Account._ID + "=?" + " OR " + Imps.Account.USERNAME + "=?)";
@@ -543,31 +539,23 @@ public class ImApp extends MultiDexApplication implements ICacheWordSubscriber {
     }
 
     public static IImConnection getConnection(long providerId,long accountId) {
-
         try {
-
             if (providerId == -1 || accountId == -1)
                 throw new RuntimeException("getConnection() needs valid values: " + providerId + "," + accountId);
 
             if (mImService != null) {
                 IImConnection im = mImService.getConnection(providerId, accountId);
-
                 if (im != null) {
-
                     im.getState();
-
                 } else {
                     im = createConnection(providerId, accountId);
-
                 }
-
                 return im;
             }
             else
                 return null;
         }
-        catch (RemoteException re)
-        {
+        catch (RemoteException re) {
             return null;
         }
     }
@@ -829,8 +817,7 @@ public class ImApp extends MultiDexApplication implements ICacheWordSubscriber {
     }
 
 
-    public boolean setDefaultAccount (long providerId, long accountId)
-    {
+    public boolean setDefaultAccount (long providerId, long accountId) {
 
         final Uri uri = Imps.Provider.CONTENT_URI_WITH_ACCOUNT;
         String[] PROVIDER_PROJECTION = {
@@ -878,13 +865,10 @@ public class ImApp extends MultiDexApplication implements ICacheWordSubscriber {
         return false;
     }
 
-    public boolean initAccountInfo ()
-    {
-
+    public boolean initAccountInfo () {
         long lastAccountId = settings.getLong("defaultAccountId",-1);
 
         if (mDefaultProviderId == -1 || mDefaultAccountId == -1) {
-
             final Uri uri = Imps.Provider.CONTENT_URI_WITH_ACCOUNT;
             String[] PROVIDER_PROJECTION = {
                     Imps.Provider._ID,
@@ -916,48 +900,36 @@ public class ImApp extends MultiDexApplication implements ICacheWordSubscriber {
                     username = username + '@' + settings.getDomain();
                     String otrFingerprint = OtrAndroidKeyManagerImpl.getInstance(this).getLocalFingerprint(username);
 
-                    if ((!mNeedsAccountUpgrade)
-                            && settings.getDomain().equalsIgnoreCase("dukgo.com") && keepSignedIn)
-                    {
+                    if ((!mNeedsAccountUpgrade) && settings.getDomain().equalsIgnoreCase("dukgo.com") && keepSignedIn) {
                         mNeedsAccountUpgrade = true;
                     }
-
                     settings.close();
 
-                    if (lastAccountId == -1 && keepSignedIn)
-                    {
+                    if (lastAccountId == -1 && keepSignedIn) {
+                        mDefaultProviderId = providerId;
+                        mDefaultAccountId = accountId;
+                        mDefaultUsername = username;
+                        mDefaultNickname = nickname;
+                        mDefaultOtrFingerprint = otrFingerprint;
+                    } else if (lastAccountId == accountId) {
+                        mDefaultProviderId = providerId;
+                        mDefaultAccountId = accountId;
+                        mDefaultUsername = username;
+                        mDefaultNickname = nickname;
+                        mDefaultOtrFingerprint = otrFingerprint;
+                    } else if (mDefaultProviderId == -1) {
                         mDefaultProviderId = providerId;
                         mDefaultAccountId = accountId;
                         mDefaultUsername = username;
                         mDefaultNickname = nickname;
                         mDefaultOtrFingerprint = otrFingerprint;
                     }
-                    else if (lastAccountId == accountId)
-                    {
-                        mDefaultProviderId = providerId;
-                        mDefaultAccountId = accountId;
-                        mDefaultUsername = username;
-                        mDefaultNickname = nickname;
-                        mDefaultOtrFingerprint = otrFingerprint;
-                    }
-                    else if (mDefaultProviderId == -1)
-                    {
-                        mDefaultProviderId = providerId;
-                        mDefaultAccountId = accountId;
-                        mDefaultUsername = username;
-                        mDefaultNickname = nickname;
-                        mDefaultOtrFingerprint = otrFingerprint;
-                    }
-
                 }
             }
-
             if (cursorProviders != null)
                 cursorProviders.close();
         }
-
         return true;
-
     }
 
     public boolean checkUpgrade ()

@@ -319,6 +319,7 @@ public class XmppConnection extends ImConnection {
         String userName = Imps.Account.getUserName(contentResolver, mAccountId);
         String domain = providerSettings.getDomain();
         String xmppName = userName + '@' + domain + '/' + providerSettings.getXmppResource();
+
         contactUser = new Contact(new XmppAddress(xmppName), nickname, Imps.Contacts.TYPE_NORMAL);
         return contactUser;
     }
@@ -1798,7 +1799,7 @@ public class XmppConnection extends ImConnection {
     private void initConnection(Imps.ProviderSettings.QueryMap providerSettings, String userName) throws InterruptedException, NoSuchAlgorithmException, KeyManagementException, XMPPException, SmackException, IOException  {
 
         boolean allowPlainAuth = false;//never! // providerSettings.getAllowPlainAuth();
-        boolean requireTls = true;// providerSettings.getRequireTls(); //always!
+        boolean requireTls = false; //providerSettings.getRequireTls(); //always! //TODO: ACD WAS TRUE
         boolean doDnsSrv = providerSettings.getDoDnsSrv();
        // boolean tlsCertVerify = providerSettings.getTlsCertVerify();
 
@@ -1848,8 +1849,9 @@ public class XmppConnection extends ImConnection {
         mConfig.setServiceName(JidCreate.domainBareFrom(domain));
         mConfig.setPort(serverPort);
 
-        mConfig.setCompressionEnabled(true);
-        mConfig.setConnectTimeout(CONNECT_TIMEOUT);
+        mConfig.setCompressionEnabled(true); //todo: default true
+//        mConfig.setConnectTimeout(CONNECT_TIMEOUT);
+
 
         if (!TextUtils.isEmpty(Preferences.getProxyServerHost()))
         {
@@ -1865,39 +1867,39 @@ public class XmppConnection extends ImConnection {
         }
 
         // No server requested and SRV lookup wasn't requested or returned nothing - use domain
-        if (server == null)
-            mConfig.setHost(domain);
-        else {
-            mConfig.setHost(server);
+        if (server == null) {
+            //TODO: ACD
+         //   mConfig.setHost(domain);
+            mConfig.setHostAddress(InetAddress.getByName(domain));
+        }else {
+            mConfig.setHostAddress(InetAddress.getByName(server));
 
             try {
-
-
                 String[] addressParts = server.split("\\.");
                 if (Integer.parseInt(addressParts[0]) != -1) {
                     byte[] parts = new byte[addressParts.length];
                     for (int i = 0; i < 4; i++)
                         parts[i] = (byte)Integer.parseInt(addressParts[i]);
-
                     byte[] ipAddr = new byte[]{parts[0],parts[1],parts[2],parts[3]};
                     InetAddress addr = InetAddress.getByAddress(ipAddr);
                     mConfig.setHostAddress(addr);
-
-                }
-                else
-                {
+                } else {
                     mConfig.setHostAddress(InetAddress.getByName(server));
                 }
             }
             catch (Exception e){
                 debug(TAG,"error parsing server as IP address; using as hostname instead");
                 mConfig.setHostAddress(InetAddress.getByName(server));
-
             }
 
-            mConfig.setHostAddress(InetAddress.getByName(server));
-            mConfig.setXmppDomain(domain);
+           // mConfig.setHostAddress(InetAddress.getByName(server));
+            //mConfig.setXmppDomain(domain);
         }
+
+        mConfig.setSecurityMode(ConnectionConfiguration.SecurityMode.disabled);
+        mConfig.setDebuggerEnabled(true);
+        //TODO: ACD UP sonradan eklendi********************************************
+
 
         mConfig.setProxyInfo(mProxyInfo);
 
@@ -1906,9 +1908,7 @@ public class XmppConnection extends ImConnection {
         SmackConfiguration.setDebuggerFactory(new SmackDebuggerFactory() {
             @Override
             public SmackDebugger create(XMPPConnection xmppConnection, Writer writer, Reader reader) throws IllegalArgumentException {
-
                 return new AndroidDebugger(xmppConnection, writer, reader);
-
             }
         });
 
@@ -2005,9 +2005,9 @@ public class XmppConnection extends ImConnection {
                 mMemTrust.wrapHostnameVerifier(new org.apache.http.conn.ssl.StrictHostnameVerifier()));
 
 
-        mConfig.setSendPresence(true);
+        mConfig.setSendPresence(false); //todo:was true
 
-        XMPPTCPConnection.setUseStreamManagementDefault(true);
+        XMPPTCPConnection.setUseStreamManagementDefault(false);
 
         mConnection = new XMPPTCPConnection(mConfig.build());
 

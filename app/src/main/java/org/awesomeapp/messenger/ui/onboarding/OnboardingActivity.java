@@ -38,6 +38,7 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -74,53 +75,70 @@ import im.zom.messenger.R;
 import org.awesomeapp.messenger.util.Languages;
 
 public class OnboardingActivity extends BaseActivity {
-
     private ViewFlipper mViewFlipper;
     private EditText mEditUsername;
     private View mSetupProgress;
     //private View mSetupButton;
     private ImageView mImageAvatar;
-
     private MenuItem mItemSkip = null;
-
     private EditText mSpinnerDomains;
-
     private String mNickname;
     private String mUsername;
     private String mFingerprint;
     private OnboardingAccount mNewAccount;
-
     private SimpleAlertHandler mHandler;
-
     private static final String USERNAME_ONLY_ALPHANUM = "[^A-Za-z0-9]";
-
     private boolean mShowSplash = true;
     private ListPopupWindow mDomainList;
-
     private FindServerTask mCurrentFindServerTask;
     private ExistingAccountTask mExistingAccountTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        mShowSplash = getIntent().getBooleanExtra("showSplash",true);
-
         setContentView(R.layout.awesome_onboarding);
+        mHandler = new SimpleAlertHandler(this);
 
+        signInProcess();
+    }
+    private void signInProcess(){
+        View viewSignIn = findViewById(R.id.flipViewSignIn);
+
+        final EditText eUserName = viewSignIn.findViewById(R.id.editTextUserName);
+        final EditText ePassword = viewSignIn.findViewById(R.id.editTextPassword);
+
+        Button buttonSignIn = viewSignIn.findViewById(R.id.buttonSignIn);
+        buttonSignIn.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String userName = eUserName.getText().toString();
+                String password = ePassword.getText().toString();
+                if(userName.trim().length()>0 && password.trim().length()>0) {
+                    if (verifyJabberID(userName)) {
+                        findViewById(R.id.progressExistingUser).setVisibility(View.VISIBLE);
+                        findViewById(R.id.progressExistingImage).setVisibility(View.VISIBLE);
+
+                        if (mExistingAccountTask == null) {
+                            mExistingAccountTask = new ExistingAccountTask();
+                            mExistingAccountTask.execute(userName, password);
+                        }
+                    } else {
+                        Toast.makeText(getApplicationContext(), getString(R.string.account_setup_example_email_address),Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+        });
+    }
+    private void oldStuff(){
+        mShowSplash = getIntent().getBooleanExtra("showSplash",true);
         if (mShowSplash) {
             getSupportActionBar().hide();
-
-        }
-        else
-        {
+        } else {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setHomeButtonEnabled(true);
         }
-
         getSupportActionBar().setTitle("");
 
-        mHandler = new SimpleAlertHandler(this);
 
         View viewSplash = findViewById(R.id.flipViewMain);
         View viewRegister =  findViewById(R.id.flipViewRegister);
@@ -133,15 +151,14 @@ public class OnboardingActivity extends BaseActivity {
         final SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
         int themeColorHeader = settings.getInt("themeColor",-1);
 
-        if (themeColorHeader != -1)
-            viewInvite.setBackgroundColor(themeColorHeader);
+//        if (themeColorHeader != -1) viewInvite.setBackgroundColor(themeColorHeader);
 
         mViewFlipper = (ViewFlipper) findViewById(R.id.viewFlipper1);
 
         mEditUsername = (EditText)viewCreate.findViewById(R.id.edtNewName);
         mSpinnerDomains = (EditText)viewAdvanced.findViewById(R.id.spinnerDomains);
-     //   ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
-       //         android.R.layout.simple_dropdown_item_1line, OnboardingManager.getServers(this));
+        //   ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+        //         android.R.layout.simple_dropdown_item_1line, OnboardingManager.getServers(this));
         // mSpinnerDomains.setAdapter(adapter);
 
         mDomainList = new ListPopupWindow(this);
@@ -181,7 +198,7 @@ public class OnboardingActivity extends BaseActivity {
             public void onClick(View view) {
 
 
-               startAvatarTaker();
+                startAvatarTaker();
 
             }
         });
@@ -323,11 +340,11 @@ public class OnboardingActivity extends BaseActivity {
 
             @Override
             public void onClick(View v) {
-               
+
                 doInviteShare();
-                
+
             }
-            
+
         });
 
         View btnInviteQR = viewInvite.findViewById(R.id.btnInviteScan);
@@ -336,11 +353,11 @@ public class OnboardingActivity extends BaseActivity {
 
             @Override
             public void onClick(View v) {
-               
+
                 doInviteScan();
-                
+
             }
-            
+
         });
 
 
@@ -350,7 +367,7 @@ public class OnboardingActivity extends BaseActivity {
             @Override
             public void onClick(View v) {
 
-               doExistingAccountRegister();
+                doExistingAccountRegister();
 
             }
 
@@ -362,119 +379,86 @@ public class OnboardingActivity extends BaseActivity {
             showOnboarding();
         }
     }
-
-    private void setAnimLeft ()
-    {
+    private void setAnimLeft () {
         Animation animIn = AnimationUtils.loadAnimation(this, R.anim.push_left_in);
         Animation animOut = AnimationUtils.loadAnimation(this, R.anim.push_left_out);
         mViewFlipper.setInAnimation(animIn);
         mViewFlipper.setOutAnimation(animOut);
     }
-    
-    private void setAnimRight ()
-    {
+    private void setAnimRight () {
         Animation animIn = AnimationUtils.loadAnimation(OnboardingActivity.this, R.anim.push_right_in);
         Animation animOut = AnimationUtils.loadAnimation(OnboardingActivity.this, R.anim.push_right_out);
         mViewFlipper.setInAnimation(animIn);
         mViewFlipper.setOutAnimation(animOut);
     }
 
-    @Override
+/*    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-
         getMenuInflater().inflate(R.menu.menu_onboarding, menu);
-
         mItemSkip = menu.findItem(R.id.menu_skip);
-
         return true;
     }
-
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-
         switch (item.getItemId()) {
         case android.R.id.home:
-                        
             showPrevious();
-
             return true;
         }
         return super.onOptionsItemSelected(item);
     }
-
     @Override
     public void onBackPressed() {
-
         if (mDomainList != null && mDomainList.isShowing())
             mDomainList.dismiss();
         else
             showPrevious();
-    }
+    } */
 
-    // Back button should bring us to the previous screen, unless we're on the first screen
-    private void showPrevious()
-    {
+    private void showPrevious() {
         setAnimRight();
         getSupportActionBar().setTitle("");
 
         if (mCurrentFindServerTask != null)
             mCurrentFindServerTask.cancel(true);
 
-        if (mViewFlipper.getCurrentView().getId()==R.id.flipViewMain)
-        {
+        if (mViewFlipper.getCurrentView().getId()==R.id.flipViewMain) {
             finish();
         }
-        else if (mViewFlipper.getCurrentView().getId()==R.id.flipViewRegister)
-        {
+        else if (mViewFlipper.getCurrentView().getId()==R.id.flipViewRegister) {
             if (mShowSplash)
                 showSplashScreen();
             else
                 finish();
         }
-        else if (mViewFlipper.getCurrentView().getId()==R.id.flipViewCreateNew)
-        {
+        else if (mViewFlipper.getCurrentView().getId()==R.id.flipViewCreateNew) {
             showOnboarding();
         }
-        else if (mViewFlipper.getCurrentView().getId()==R.id.flipViewLogin)
-        {
+        else if (mViewFlipper.getCurrentView().getId()==R.id.flipViewLogin) {
             showOnboarding();
         }
-        else if (mViewFlipper.getCurrentView().getId()==R.id.flipViewAdvanced)
-        {
-
+        else if (mViewFlipper.getCurrentView().getId()==R.id.flipViewAdvanced) {
             showOnboarding();
-
         }
     }
-
-    private void showSplashScreen ()
-    {
+    private void showSplashScreen () {
         setAnimRight();
         getSupportActionBar().hide();
         getSupportActionBar().setTitle("");
         mViewFlipper.setDisplayedChild(0);
     }
 
-    private void showOnboarding ()
-    {
-
+    private void showOnboarding () {
         mViewFlipper.setDisplayedChild(1);
-
     }
-
-
-    private void showSetupScreen ()
-    {
-
+    private void showSetupScreen () {
         mViewFlipper.setDisplayedChild(2);
         getSupportActionBar().show();
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setHomeButtonEnabled(true);
     }
 
-    private void showLoginScreen ()
-    {
-
+    private void showLoginScreen () {
         mViewFlipper.setDisplayedChild(3);
         findViewById(R.id.progressExistingUser).setVisibility(View.GONE);
         findViewById(R.id.progressExistingImage).setVisibility(View.GONE);
@@ -483,18 +467,14 @@ public class OnboardingActivity extends BaseActivity {
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setHomeButtonEnabled(true);
     }
-
-    private void showAdvancedScreen ()
-    {
+    private void showAdvancedScreen () {
         mViewFlipper.setDisplayedChild(4);
-
         getSupportActionBar().show();
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setHomeButtonEnabled(true);
     }
 
-    private void startAdvancedSetup ()
-    {
+    private void startAdvancedSetup () {
         mSetupProgress = findViewById(R.id.progressNewUser);
         mSetupProgress.setVisibility(View.VISIBLE);
 
@@ -505,31 +485,19 @@ public class OnboardingActivity extends BaseActivity {
             username = "zomuser"; //if there are no alphanum then just use "zomuser"
 
       //  mEditUsername.setText(username);
-
         String domain = ((EditText)findViewById(R.id.spinnerDomains)).getText().toString();
-
         String password = ((EditText)findViewById(R.id.edtNewPass)).getText().toString();
-
         mViewFlipper.setDisplayedChild(2);
-
         showSetupProgress();
-
         if (mCurrentFindServerTask != null)
             mCurrentFindServerTask.cancel(true);
-
         mCurrentFindServerTask = new FindServerTask ();
         mCurrentFindServerTask.execute(mNickname, username, domain, password);
-
     }
-    
-    private void startAccountSetup()
-    {
+    private void startAccountSetup() {
         setAnimLeft();
-
         showSetupProgress ();
-
         String username = mNickname.replaceAll(USERNAME_ONLY_ALPHANUM, "").toLowerCase();
-
         if (TextUtils.isEmpty(username))
             username = "zomuser"; //if there are no alphanum then just use "zomuser"
 
@@ -540,29 +508,24 @@ public class OnboardingActivity extends BaseActivity {
         mCurrentFindServerTask.execute(mNickname,username);
     }
 
-    private void showSetupForm ()
-    {
+    private void showSetupForm () {
         View viewCreate = findViewById(R.id.flipViewCreateNew);
         viewCreate.findViewById(R.id.viewProgress).setVisibility(View.GONE);
         viewCreate.findViewById(R.id.viewCreate).setVisibility(View.VISIBLE);
         viewCreate.findViewById(R.id.btnAdvanced).setVisibility(View.VISIBLE);
-
     }
-
-    private void showSetupProgress ()
-    {
+    private void showSetupProgress () {
         View viewCreate = findViewById(R.id.flipViewCreateNew);
         viewCreate.findViewById(R.id.viewProgress).setVisibility(View.VISIBLE);
         viewCreate.findViewById(R.id.viewCreate).setVisibility(View.GONE);
         viewCreate.findViewById(R.id.btnAdvanced).setVisibility(View.GONE);
-
     }
+
 
     private class FindServerTask extends AsyncTask<String, Void, OnboardingAccount> {
         @Override
         protected OnboardingAccount doInBackground(String... setupValues) {
             try {
-
                 String server = null;
                 String domain = null;
                 String password = null;
@@ -576,8 +539,7 @@ public class OnboardingActivity extends BaseActivity {
                 if (setupValues.length > 4)
                     server = setupValues[4];
 
-                if (domain == null)
-                {
+                if (domain == null) {
                     Pair<String,String> serverInfo = OnboardingManager.getServerInfo(OnboardingActivity.this,0);
                     domain = serverInfo.first;
                     server = serverInfo.second;
@@ -596,12 +558,8 @@ public class OnboardingActivity extends BaseActivity {
 
                     result = OnboardingManager.registerAccount(OnboardingActivity.this, nickname, username, password, domain, server, 5222);
 
-                    if (result == null)
-                    {
-                        //wait one second
-                        try
-                        {Thread.sleep(1000);}
-                        catch (Exception e){}
+                    if (result == null) { //wait one second
+                        try {Thread.sleep(1000);} catch (Exception e){}
 
                         //append key to username
                         username = setupValues[1] + '.' + mFingerprint.substring(mFingerprint.length()-8,mFingerprint.length()).toLowerCase();
@@ -682,8 +640,7 @@ public class OnboardingActivity extends BaseActivity {
         }
       }
 
-    private void showInviteScreen ()
-    {
+    private void showInviteScreen () {
         mViewFlipper.setDisplayedChild(5);
 
         getSupportActionBar().setTitle("");
@@ -703,22 +660,15 @@ public class OnboardingActivity extends BaseActivity {
             }
         });
     }
-
-    private void doInviteSMS()
-    {
+    private void doInviteSMS() {
         String inviteString = OnboardingManager.generateInviteMessage(this, mNickname,mUsername, mFingerprint);
         OnboardingManager.inviteSMSContact(this, null, inviteString);
     }
-
-    private void doInviteShare()
-    {
-
+    private void doInviteShare() {
         String inviteString = OnboardingManager.generateInviteMessage(this, mNickname,mUsername, mFingerprint);
         OnboardingManager.inviteShare(this, inviteString);
     }
- 
-    private void doInviteScan ()
-    {
+    private void doInviteScan () {
         String inviteString;
         try {
             inviteString = OnboardingManager.generateInviteLink(this, mUsername, mFingerprint, mNickname);
@@ -727,20 +677,13 @@ public class OnboardingActivity extends BaseActivity {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-        
     }
-
-    private void showMainScreen ()
-    {
+    private void showMainScreen () {
         finish();
-
         Intent intent = new Intent(this, MainActivity.class);
         startActivity(intent);
-
     }
-
-    private void doExistingAccountRegister ()
-    {
+    private void doExistingAccountRegister () {
         String username = ((TextView)findViewById(R.id.edtName)).getText().toString();
         String password = ((TextView)findViewById(R.id.edtPass)).getText().toString();
 
@@ -753,16 +696,13 @@ public class OnboardingActivity extends BaseActivity {
                 mExistingAccountTask.execute(username, password);
             }
         }
-        else
-        {
+        else {
             Toast.makeText(this,getString(R.string.account_setup_example_email_address),Toast.LENGTH_SHORT).show();
         }
     }
-
     public static boolean verifyJabberID(String jid) {
         if (jid != null) {
-            Pattern p = Pattern
-                    .compile("(?i)[a-z0-9\\-_\\.]++@[a-z0-9\\-_]++(\\.[a-z0-9\\-_]++)++");
+            Pattern p = Pattern.compile("(?i)[a-z0-9\\-_\\.]++@[a-z0-9\\-_]++(\\.[a-z0-9\\-_]++)++");
             Matcher m = p.matcher(jid);
 
             if (!m.matches()) {
@@ -771,32 +711,27 @@ public class OnboardingActivity extends BaseActivity {
         } else {
             return false;
         }
-
         return true;
     }
-
 
     private class ExistingAccountTask extends AsyncTask<String, Void, OnboardingAccount> {
         @Override
         protected OnboardingAccount doInBackground(String... account) {
             try {
-
                 OtrAndroidKeyManagerImpl keyMan = OtrAndroidKeyManagerImpl.getInstance(OnboardingActivity.this);
                 KeyPair keyPair = keyMan.generateLocalKeyPair();
                 mFingerprint = keyMan.getFingerprint(keyPair.getPublic());
 
-                String nickname = new XmppAddress(account[0]).getUser();
+                String nickname = new XmppAddress(account[0]).getUser(); //nickname = username.substring(@); account0 = username = ...@server; account1 = passw;
                 OnboardingAccount result = OnboardingManager.addExistingAccount(OnboardingActivity.this, mHandler, nickname, account[0], account[1]);
 
                 if (result != null) {
                     String jabberId = result.username + '@' + result.domain;
                     keyMan.storeKeyPair(jabberId,keyPair);
                 }
-
                 return result;
             }
-            catch (Exception e)
-            {
+            catch (Exception e) {
                 Log.e(ImApp.LOG_TAG, "auto onboarding fail", e);
                 return null;
             }
@@ -804,7 +739,6 @@ public class OnboardingActivity extends BaseActivity {
 
         @Override
         protected void onPostExecute(OnboardingAccount account) {
-
             mUsername = account.username + '@' + account.domain;
 
             ImApp mApp = (ImApp)getApplication();
@@ -814,29 +748,24 @@ public class OnboardingActivity extends BaseActivity {
             signInHelper.activateAccount(account.providerId,account.accountId);
             signInHelper.signIn(account.password, account.providerId, account.accountId, true);
 
-            showInviteScreen();
-
             mExistingAccountTask = null;
+
+            Toast.makeText(getApplicationContext(), getString(R.string.signed_in),Toast.LENGTH_SHORT).show();
+            showMainScreen();
         }
     }
 
-    @Override
+    @Override //scan, choose avatar
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-
-
         ImApp mApp = (ImApp)getApplication();
         mApp.initAccountInfo();
 
         if (resultCode == RESULT_OK) {
             if (requestCode == OnboardingManager.REQUEST_SCAN) {
-
                 showInviteScreen();
-
                 ArrayList<String> resultScans = data.getStringArrayListExtra("result");
-                for (String resultScan : resultScans)
-                {
-
+                for (String resultScan : resultScans) {
                     try {
                         //parse each string and if they are for a new user then add the user
                         OnboardingManager.DecodedInviteLink diLink = OnboardingManager.decodeInviteLink(resultScan);
@@ -844,22 +773,17 @@ public class OnboardingActivity extends BaseActivity {
                         new AddContactAsyncTask(mNewAccount.providerId, mNewAccount.accountId, mApp).execute(diLink.username, diLink.fingerprint, diLink.nickname);
 
                         //if they are for a group chat, then add the group
-                    }
-                    catch (Exception e)
-                    {
+                    } catch (Exception e) {
                         Log.w(ImApp.LOG_TAG, "error parsing QR invite link", e);
                     }
                 }
 
-                if (resultScans.size() > 0)
-                {
+                if (resultScans.size() > 0) {
                     showMainScreen ();
                 }
             }
-            else if (requestCode == OnboardingManager.REQUEST_CHOOSE_AVATAR)
-            {
+            else if (requestCode == OnboardingManager.REQUEST_CHOOSE_AVATAR) {
                 Uri imageUri = getPickImageResultUri(data);
-
                 if (imageUri == null)
                     return;
 
@@ -868,7 +792,6 @@ public class OnboardingActivity extends BaseActivity {
                 mCropImageView.setFixedAspectRatio(true);
                 mCropImageView.setCropShape(CropImageView.CropShape.OVAL);
               //  mCropImageView.setGuidelines(1);
-
                 try {
                     Bitmap bmpThumbnail = SecureMediaStore.getThumbnailFile(OnboardingActivity.this, imageUri, 512);
                     mCropImageView.setImageBitmap(bmpThumbnail);
@@ -880,32 +803,24 @@ public class OnboardingActivity extends BaseActivity {
                                 public void onClick(DialogInterface dialog, int id) {
                                     setAvatar(mCropImageView.getCroppedImage(), mNewAccount);
                                     showInviteScreen();
-
                                     delete(mOutputFileUri);
                                 }
                             })
                             .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
                                 public void onClick(DialogInterface dialog, int id) {
                                     // User cancelled the dialog
-
                                     delete(mOutputFileUri);
-
                                 }
                             });
                     // Create the AlertDialog object and return it
                     android.support.v7.app.AlertDialog dialog = builder.create();
                     dialog.show();
-
-
-                    ;
                 } catch (IOException ioe) {
                     Log.e(ImApp.LOG_TAG, "couldn't load avatar", ioe);
                 }
             }
-
         }
     }
-
 
     private void setAvatar(Bitmap bmp, OnboardingAccount account) {
 
@@ -927,7 +842,6 @@ public class OnboardingActivity extends BaseActivity {
             Log.w(ImApp.LOG_TAG, "error loading image bytes", e);
         }
     }
-
     public byte[] getBytes(InputStream inputStream) throws IOException {
         ByteArrayOutputStream byteBuffer = new ByteArrayOutputStream();
         int bufferSize = 1024;
@@ -997,7 +911,6 @@ public class OnboardingActivity extends BaseActivity {
 
         return chooserIntent;
     }
-
     Uri mOutputFileUri = null;
 
     /**
@@ -1013,7 +926,6 @@ public class OnboardingActivity extends BaseActivity {
         return mOutputFileUri;
     }
 
-
     private boolean delete(Uri uri) {
         if (uri.getScheme().equals("content")) {
             int deleted = getContentResolver().delete(uri,null,null);
@@ -1027,7 +939,6 @@ public class OnboardingActivity extends BaseActivity {
         }
         return false;
     }
-
 
     /**
      * Get the URI of the selected image from {@link #getPickImageChooserIntent()}.<br/>

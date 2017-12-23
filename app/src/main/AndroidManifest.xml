@@ -80,7 +80,9 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
             <intent-filter>
+
                 <action android:name="info.guardianproject.panic.action.TRIGGER" />
 
                 <category android:name="android.intent.category.DEFAULT" />
@@ -338,7 +340,7 @@
                 <category android:name="info.guardianproject.otr.app.im.IMPS_CATEGORY" />
                 <category android:name="android.intent.category.DEFAULT" />
 
-                <data android:mimeType="vnd.android-dir/imps-providerSettings" />
+                <data android:mimeType="vnd.android-dir/imps-providersettings" />
             </intent-filter>
         </activity>
         <activity
@@ -386,7 +388,7 @@
             android:enabled="true"
             android:exported="false" />
 
-        <activity android:name="net.hockeyapp.android.UpdateActivity" />
+     <!--   <activity android:name="net.hockeyapp.android.UpdateActivity" />   -->
         <activity
             android:name="org.awesomeapp.messenger.ui.legacy.DummyActivity"
             android:allowTaskReparenting="true"
@@ -464,6 +466,10 @@
         <activity
             android:name="org.awesomeapp.messenger.ui.AccountsActivity"
             android:label="@string/accounts"></activity>
+        <activity android:name="tmp.NewActivity" >
+
+        </activity>
+        <activity android:name="org.awesomeapp.messenger.ui.MusiadSignInActivity" />
 
         <provider
             android:name="android.support.v4.content.FileProvider"

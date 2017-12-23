@@ -4,9 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:gravity="center_horizontal"
-
-    >
+    android:gravity="center_horizontal">
 
 
             <ViewFlipper
@@ -17,6 +15,7 @@
                 android:layout_margin="0dp"
                 >
 
+                <include android:id="@+id/flipViewSignIn" layout="@layout/musiad_sign_in"/>
                 <include android:id="@+id/flipViewMain" layout="@layout/awesome_onboarding_splash"/>
 
                 <include android:id="@+id/flipViewRegister" layout="@layout/awesome_onboarding_register"/>
@@ -28,7 +27,6 @@
                 <include android:id="@+id/flipViewAdvanced" layout="@layout/awesome_onboarding_advanced"/>
 
                 <include android:id="@+id/flipViewInviteFriends" layout="@layout/awesome_onboarding_invite"/>
-
 
             </ViewFlipper>
 

@@ -161,8 +161,7 @@ public class SignInHelper {
       //  mContext.finish();
     }
 
-    public void signIn(final String password, final long providerId, final long accountId,
-            final boolean isActive) {
+    public void signIn(final String password, final long providerId, final long accountId, final boolean isActive) {
 
         final ProviderDef provider = mApp.getProvider(providerId);
 
@@ -178,8 +177,7 @@ public class SignInHelper {
                 }
                 signInAccount(password, providerId, providerName, accountId);
             }
-            else
-            {
+            else {
                 mApp.callWhenServiceConnected(mHandler, new Runnable() {
                     public void run() {
                         if (mApp.serviceConnected()) {
@@ -197,8 +195,6 @@ public class SignInHelper {
     }
 
     private void signInAccount(final String password, final long providerId, final String providerName, final long accountId) {
-
-
         try {
             signInAccountAsync(password, providerId, providerName, accountId);
         } catch (RemoteException e) {
@@ -264,7 +260,7 @@ public class SignInHelper {
      */
     private void promptForBackgroundDataSetting(String providerName) {
 
-        Toast.makeText(mContext, mContext.getString(R.string.bg_data_prompt_message, providerName), Toast.LENGTH_LONG).show();
+        Toast.makeText(mContext, mContext.getString(R.string.bg_data_prompt_message), Toast.LENGTH_LONG).show();
 
 
     }

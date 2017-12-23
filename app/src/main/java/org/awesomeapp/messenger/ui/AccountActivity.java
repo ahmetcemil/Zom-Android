@@ -291,8 +291,7 @@ public class AccountActivity extends BaseActivity {
 
     }
 
-    private void setupUIPre ()
-    {
+    private void setupUIPre () {
         ((ImApp)getApplication()).setAppTheme(this);
 
         setContentView(R.layout.account_activity);
@@ -502,8 +501,7 @@ public class AccountActivity extends BaseActivity {
 
     }
 
-    private boolean checkForKey (String userid)
-    {
+    private boolean checkForKey (String userid) {
 
         try
         {
